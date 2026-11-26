@@ -145,7 +145,8 @@ def main():
 
     sub = players[:500]
     hits = sum(1 for p, _ in sub if contract_at(p, player.OFF_PLAYER_OBJECT + player.PLAYER_CONTRACT_LIST))
-    say(hits > 0.7 * len(sub), "lista contratti (persona +0xA0)", f"{hits}/{len(sub)} giocatori con contratto")
+    say(hits > 0.7 * len(sub), f"lista contratti (persona {player.OFF_PLAYER_OBJECT + player.PLAYER_CONTRACT_LIST:+#x})",
+        f"{hits}/{len(sub)} giocatori con contratto")
     if hits < 0.7 * len(sub):
         best = collections.Counter()
         for p, _ in sub[:150]:
@@ -166,8 +167,10 @@ def main():
         for w in wages[:6]:
             print("         ", w)
 
+    lay = player.injury_layout(proc)
     inj = sum(1 for p, _ in players if player.injuries(proc, p))
-    say(None, "infortuni", f"{inj} giocatori infortunati nel campione (controlla che siano plausibili)")
+    say(inj > 0, "infortuni", f"lista/numero nello stato a +{lay[0]:#x}/+{lay[1]:#x}; "
+        f"{inj} giocatori infortunati nel campione di {len(players)}")
 
     # ------------------------------------------------------------- squadre e club
     teams = find_dword(proc, clubs.TEAM_VTABLE)
@@ -182,12 +185,15 @@ def main():
         if lst and 0 < n <= 200:
             total += 1
             objs = struct.unpack(f"<{n}I", cache.read(lst, n * 4))
-            if all(o and cache.u32(o + clubs.PLAYER_OBJECT_TO_PERSON) == people.PERSON_VTABLE for o in objs):
+            # nelle rose ci sono anche VIRTUAL_PLAYER e ACTUAL_PLAYER_AND_NON_PLAYER (giocatori-allenatori),
+            # che l'editor ignora: basta che la maggior parte siano giocatori veri
+            real = sum(1 for o in objs if o and cache.u32(o + clubs.PLAYER_OBJECT_TO_PERSON) == people.PERSON_VTABLE)
+            if real >= 0.5 * n:
                 good += 1
     say(total > 0 and good > 0.9 * total, "rose delle squadre (squadra +0x94/+0x98)",
         f"{good}/{total} squadre con elenco giocatori valido")
     reps = np.array(reps) if reps else np.array([0])
-    say((reps <= 10000).mean() > 0.99 and reps.max() > 5000, "reputazione squadra (+0x70)",
+    say((reps <= 10000).mean() > 0.99 and reps.max() > 5000, f"reputazione squadra (+{clubs.TEAM_REPUTATION:#x})",
         f"0-10000: {frac((reps <= 10000).mean())}, massimo {reps.max()}, media {reps.mean():.0f}")
 
     club_list = clubs.list_clubs(proc)
@@ -204,7 +210,7 @@ def main():
         if shown < 4 and f["fields"][0]["value"] != 0:
             shown += 1
             print(f"       {c['name']}: " + ", ".join(f"{x['key']}={x['value']}" for x in f["fields"]))
-    say(fin_ok > 0, "oggetti finanze (club +0x11C)", f"{fin_ok} club con finanze. Confronta le cifre sopra "
+    say(fin_ok > 0, f"oggetti finanze (club +{clubs.CLUB_FINANCE_PTR:#x})", f"{fin_ok} club con finanze. Confronta le cifre sopra "
         "con la schermata Finanze del gioco (divise per il cambio della valuta)")
     info = 0
     for c in club_list[:2000]:

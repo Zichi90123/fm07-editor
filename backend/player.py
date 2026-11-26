@@ -4,6 +4,7 @@ Blocco attributi = *(persona - 0x20). Valori su scala 1-100: il gioco mostra
 round(valore / 5). Layout ricavato da quello di FM08 (vedi MAPPA.md): in FM07
 il blocco è più corto di 1 byte (un getter del gioco legge +0x6B invece di +0x6C).
 """
+import collections
 import struct
 
 from people import OFF_ATTR_PTR, PageCache
@@ -217,10 +218,11 @@ INJURY_DAYS_LEFT = 0x10
 INJURY_DAYS_TOTAL = 0x12
 MAX_INJURIES = 8
 
-# Contratto: *( *(persona + 0xA0) ). In FM08 la lista contratti è a persona +0xA0 sia per i giocatori
-# sia per gli allenatori: la parte "persona" ha lo stesso layout, quindi in FM07 è a oggetto +0x174.
+# Contratto: *( *(persona + 0x98) ) (FM08: persona +0xA0). Trovato sulla partita con tools/diag.py:
+# chi punta agli array di contratti sta a persona +0x98 (gli oggetti giocatore sono consecutivi ogni 0x1E4
+# byte, per questo la diagnosi lo vede anche come -0x14C dalla persona successiva).
 OFF_PLAYER_OBJECT = OBJ
-PLAYER_CONTRACT_LIST = 0xA0 - OBJ
+PLAYER_CONTRACT_LIST = 0x98 - OBJ
 CONTRACT_VTABLE = 0x010A434C   # FULL_CONTRACT
 # Getter del gioco: i premi sono spostati rispetto a FM08 (0x48/0x4C/0x50 -> 0x4C/0x50/0x58).
 CONTRACT_FIELDS = [  # (campo, nome, offset, tipo)
@@ -252,14 +254,52 @@ def contract_address(proc, person):
     return c
 
 
+_injury_layout = {}
+
+
+def injury_layout(proc):
+    """(offset lista, offset numero) degli infortuni nell'oggetto stato.
+
+    In FM08 sono +0x10 / +0x14; in FM07 il puntatore allo stato (oggetto giocatore +0x30) è confermato,
+    ma dentro lo stato la lista non è a +0x10. La si cerca una volta per processo: la coppia
+    (puntatore, numero 1-8) il cui primo elemento è un oggetto PLAYER_INJURY."""
+    if proc.pid in _injury_layout:
+        return _injury_layout[proc.pid]
+    from people import PERSON_VTABLE, find_dword
+    cache = PageCache(proc)
+    votes = collections.Counter()
+    for person in find_dword(proc, PERSON_VTABLE):
+        st = cache.u32(person + OFF_PLAYER_OBJECT + PLAYER_STATUS)
+        if not st:
+            continue
+        raw = cache.read(st, 0x60)
+        for off in range(0, 0x58, 4):
+            p, n = struct.unpack_from("<II", raw, off)
+            if p and 0 < n <= MAX_INJURIES and cache.u32(cache.u32(p)) == INJURY_VTABLE:
+                votes[off] += 1
+        if votes and votes.most_common(1)[0][1] >= 10:
+            break
+    off = votes.most_common(1)[0][0] if votes else STATUS_INJURY_LIST
+    _injury_layout[proc.pid] = (off, off + 4)
+    return _injury_layout[proc.pid]
+
+
+def injury_count(proc, cache, status):
+    """Numero di infortuni (0 se lo stato non ha la forma attesa)."""
+    _, count_off = injury_layout(proc)
+    n = cache.u32(status + count_off)
+    return n if 0 < n <= MAX_INJURIES else 0
+
+
 def injuries(proc, person):
     """Indirizzi degli oggetti infortunio del giocatore."""
     cache = PageCache(proc)
     st = cache.u32(person + OFF_PLAYER_OBJECT + PLAYER_STATUS)
     if not st:
         return []
-    n = cache.u32(st + STATUS_INJURY_COUNT)
-    lst = cache.u32(st + STATUS_INJURY_LIST)
+    list_off, count_off = injury_layout(proc)
+    n = cache.u32(st + count_off)
+    lst = cache.u32(st + list_off)
     if not lst or not 0 < n <= MAX_INJURIES:
         return []
     out = []
@@ -386,12 +426,12 @@ def heal(proc, person):
     st = cache.u32(person + OFF_PLAYER_OBJECT + PLAYER_STATUS)
     if not st:
         raise PlayerError("Stato del giocatore non trovato")
-    n = cache.u32(st + STATUS_INJURY_COUNT)
-    if not 0 < n <= MAX_INJURIES:
+    n = injury_count(proc, cache, st)
+    if not n:
         return 0
     if len(injuries(proc, person)) != n:
         raise PlayerError("La lista infortuni non ha la forma attesa: non la tocco")
-    if not proc.write(st + STATUS_INJURY_COUNT, struct.pack("<I", 0)):
+    if not proc.write(st + injury_layout(proc)[1], struct.pack("<I", 0)):
         raise PlayerError("Scrittura fallita")
     proc.write(person + OFF_CONDITION, struct.pack("<H", 10000))
     return n
@@ -479,7 +519,7 @@ def list_players(proc):
             elif vt == LOAN_VTABLE:
                 loan_club = cache.u32(e + LOAN_CLUB)
         st = cache.u32(obj + PLAYER_STATUS)
-        injured = bool(st and 0 < cache.u32(st + STATUS_INJURY_COUNT) <= MAX_INJURIES)
+        injured = bool(st and injury_count(proc, cache, st))
         member = teams.get(person, [])
         # una voce per ogni club di cui il giocatore fa parte (proprietario, prestito, comproprietà)
         squads = []

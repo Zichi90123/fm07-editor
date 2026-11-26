@@ -15,7 +15,7 @@ CLUB_VTABLE = 0x0133ADAC
 CLUB_ID = 0x14
 CLUB_NAME_RECORD = 0x28      # riferimento al nome lungo: record lista nomi
 NAME_RECORD_STRING = 0x08
-CLUB_FINANCE_PTR = 0x11C
+CLUB_FINANCE_PTR = 0x118     # FM08: +0x11C (trovato sulla partita: 300 finanze su 300)
 
 FINANCE_VTABLE = 0x0133ABD4
 FINANCE_CLUB_PTR = 0x08      # l'oggetto finanze punta al suo club: usato come controllo
@@ -33,7 +33,7 @@ FINANCE_FIELDS = [
     ("budget_remaining", "Fondo campagna acquisti (Rimanente)", 0x30, "money", True),
     ("budget_season", "Fondo campagna acquisti (Stagione)", 0x34, "money", True),
     ("transfer_pct", "% entrate del mercato disponibile", 0x38, "number", True),
-    ("wage_budget", "Budget ingaggi (da verificare)", 0xA8, "weekly", True),
+    ("wage_budget", "Budget ingaggi", 0xA8, "weekly", True),
     ("wage_spend", "Spesa attuale per gli ingaggi (calcolata dal gioco)", 0xB0, "weekly", False),
 ]
 FIELDS = {k: (name, off, kind, editable) for k, name, off, kind, editable in FINANCE_FIELDS}
@@ -133,7 +133,7 @@ CLUB_COLORS_PTR = 0x50       # array di colori ARGB (0xFFRRGGBB), quanti a +0x54
 CLUB_COLORS_COUNT = 0x54
 CLUB_TEAMS_PTR = 0x68        # array di squadre (TEAM), quante a +0x6C
 CLUB_TEAMS_COUNT = 0x6C
-TEAM_REPUTATION = 0x70       # u16 0-10000, nell'oggetto squadra (come FM08: da verificare)
+TEAM_REPUTATION = 0x6C       # u16 0-10000 (FM08 +0x70): Milan 9650, Chelsea 9300, Juventus 7750, Venezia 3500
 
 
 def _check_club(cache, club):
@@ -332,19 +332,21 @@ def game_date(proc):
 
 # --------------------------------------------------------------- valuta mostrata dal gioco
 # Indice della valuta scelta nelle preferenze (u32 in un punto fisso di fm.exe).
-# In FM08 0x018FAE88 e tabella a 0x01B227CC (verificati). Gli indirizzi di FM07 vengono dal
-# confronto del codice che li usa nelle due versioni: DA VERIFICARE. Se i dati letti non sono
-# credibili la funzione restituisce None e l'interfaccia usa il fattore impostato a mano.
-CURRENCY_INDEX = 0x015FD5F8
+# In FM08 0x018FAE88 e tabella a 0x01B227CC (verificati). In FM07 non ancora trovati: i candidati
+# ricavati dal codice (indice 0x015FD5F8, tabella 0x01843CEC) non danno valori credibili sulla
+# partita di prova. Con CURRENCY_INDEX = None l'interfaccia usa il cambio impostato a mano.
+CURRENCY_INDEX = None
 # Tabella delle valute in fm.exe: una voce ogni 0x78 byte (in FM08). Alla voce +0x00 un u32 (3 o 4),
 # a +0x04 un double = cambio rispetto alla sterlina (euro 1,45, dollaro 1,9).
-CURRENCY_TABLE = 0x01843CEC
+CURRENCY_TABLE = None
 CURRENCY_STEP = 0x78
 CURRENCY_MAX = 80
 
 
 def currency(proc):
     """-> {"index", "rate"} della valuta mostrata dal gioco, o None se i dati non sono credibili."""
+    if CURRENCY_INDEX is None:
+        return None
     raw = proc.read(CURRENCY_INDEX, 4)
     if not raw:
         return None
@@ -365,7 +367,7 @@ def currency(proc):
 # Come i giocatori hanno nome (+0x2C) e cognome (+0x30); a +0xA0 la lista contratti:
 # contratto = *( *(allenatore + 0xA0) ), FULL_CONTRACT, club a +0x08.
 HUMAN_VTABLE = 0x01348384
-HUMAN_CONTRACTS = 0xA0
+HUMAN_CONTRACTS = 0x98  # come i giocatori: la parte "persona" ha la lista contratti a +0x98 (FM08 +0xA0)
 CONTRACT_VTABLE = 0x010A434C
 CONTRACT_CLUB = 0x08
 
