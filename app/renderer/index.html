@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'">
+  <title>FM07 Editor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="mark">FM</span>08 <b>Editor</b></div>
+    <div class="spacer"></div>
+    <span class="busy-label"><i class="spinner"></i>Caricamento…</span>
+    <span id="status" class="pill off">Non agganciato</span>
+    <button id="btn-attach" class="primary">Aggancia il gioco</button>
+    <button id="btn-settings" class="icon" title="Impostazioni">⚙</button>
+  </header>
+  <div class="busybar"></div>
+
+  <div class="layout">
+    <nav class="sidebar">
+      <button class="tab active" data-tab="players"><span class="ico">👤</span>Giocatori</button>
+      <button class="tab" data-tab="clubs"><span class="ico">🛡</span>Club</button>
+      <button class="tab" data-tab="tactic"><span class="ico">▦</span>Tattica</button>
+      <div id="nav-human" class="nav-group hidden">
+        <div class="nav-title">Squadre allenate</div>
+        <div id="human-clubs" class="nav-group-list"></div>
+      </div>
+      <div id="nav-advanced" class="nav-group hidden">
+        <div class="nav-title">Avanzate</div>
+        <button class="tab" data-tab="scanner"><span class="ico">⌕</span>Scanner</button>
+        <button class="tab" data-tab="search"><span class="ico">⋯</span>Ricerche</button>
+        <button class="tab" data-tab="table"><span class="ico">☰</span>Indirizzi salvati</button>
+        <button class="tab" data-tab="memory"><span class="ico">▦</span>Memoria</button>
+      </div>
+      <div class="nav-foot muted">Fai sempre un backup del salvataggio prima di modificare.</div>
+    </nav>
+
+    <main>
+      <!-- GIOCATORI -->
+      <section id="tab-players" class="panel active">
+        <div class="split">
+          <div class="pane list-pane">
+            <div class="filters">
+              <input id="pl-q" type="search" placeholder="Cerca giocatore…" class="grow">
+              <input id="pl-club" type="search" placeholder="Club" class="w-club" list="club-names">
+              <input id="pl-nation" type="search" placeholder="Nazione" class="w-club" list="nation-names">
+              <select id="pl-role" title="Ruolo">
+                <option value="">Tutti i ruoli</option>
+                <option value="Por">Portieri</option>
+                <option value="D">Difensori</option>
+                <option value="TF">Esterni</option>
+                <option value="M">Mediani</option>
+                <option value="C">Centrocampisti</option>
+                <option value="T">Trequartisti</option>
+                <option value="A">Attaccanti</option>
+              </select>
+              <input id="pl-ca" type="number" min="0" max="200" placeholder="CA min" class="w-num" title="CA minima">
+              <input id="pl-age-min" type="number" min="0" max="60" placeholder="Età da" class="w-num" title="Età minima">
+              <input id="pl-age-max" type="number" min="0" max="60" placeholder="Età a" class="w-num" title="Età massima">
+              <input id="pl-ask-min" type="text" inputmode="decimal" placeholder="Prezzo da (M)" class="w-price" title="Prezzo richiesto minimo, in milioni (valuta del gioco)">
+              <input id="pl-ask-max" type="text" inputmode="decimal" placeholder="Prezzo a (M)" class="w-price" title="Prezzo richiesto massimo, in milioni (valuta del gioco)">
+              <label class="chk" title="Solo infortunati"><input id="pl-inj" type="checkbox"> Infortunati</label>
+              <button id="pl-search" class="primary" title="Cerca (Invio)">Cerca</button>
+            </div>
+            <div class="list-info"><span id="pl-info" class="muted">Aggancia il gioco per caricare i giocatori.</span>
+              <button id="pl-refresh" class="link" title="Rilegge i giocatori dal gioco">↻ ricarica</button></div>
+            <div class="table-wrap" id="pl-wrap">
+              <table class="grid fit players">
+                <colgroup><col class="c-name"><col class="c-club"><col class="c-nation"><col class="c-role">
+                  <col class="c-n"><col class="c-money"><col class="c-money"><col class="c-n"><col class="c-n"></colgroup>
+                <thead><tr>
+                  <th data-sort="name">Nome</th><th data-sort="club">Club</th><th data-sort="nation">Nazione</th><th data-sort="role">Ruolo</th>
+                  <th data-sort="age" class="num">Età</th><th data-sort="value" class="num">Valore</th><th data-sort="asking" class="num" title="Prezzo richiesto dal club">Prezzo rich.</th><th data-sort="ca" class="num">CA</th><th data-sort="pa" class="num">PA</th>
+                </tr></thead>
+                <tbody id="pl-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="pl-detail" class="pane detail-pane empty">
+            <div class="empty-msg">Seleziona un giocatore dall'elenco</div>
+            <div class="detail">
+              <div class="detail-head">
+                <div>
+                  <button id="d-back" class="link back">← Torna all'elenco</button>
+                  <h1 id="d-name">—</h1>
+                  <div id="d-sub" class="muted"></div>
+                </div>
+                <div class="badges">
+                  <div class="badge"><small>CA</small><b id="d-ca">–</b></div>
+                  <div class="badge"><small>PA</small><b id="d-pa">–</b></div>
+                  <div class="badge"><small>Cond.</small><b id="d-cond">–</b></div>
+                  <div class="badge"><small>Morale</small><b id="d-mor">–</b></div>
+                </div>
+              </div>
+              <div class="detail-actions">
+                <div class="subtabs" id="d-tabs">
+                  <button class="subtab active" data-sub="attr">Attributi</button>
+                  <button class="subtab" data-sub="gen">Generale</button>
+                  <button class="subtab" data-sub="roles">Ruoli</button>
+                  <button class="subtab" data-sub="contract">Contratto</button>
+                </div>
+                <div class="spacer"></div>
+                <span id="d-dirty" class="muted"></span>
+                <button id="d-heal" class="hidden warn">✚ Guarisci</button>
+                <button id="d-reload" class="ghost" title="Rileggi dal gioco">↻</button>
+                <button id="d-save" class="primary" disabled>Salva</button>
+                <button id="d-close" class="ghost" title="Torna all'elenco (Esc)">✕</button>
+              </div>
+              <div class="subpanel active" data-sub="attr"><div id="d-attr" class="attr-cols"></div></div>
+              <div class="subpanel" data-sub="gen"><div id="d-gen" class="form-cols"></div></div>
+              <div class="subpanel" data-sub="roles">
+                <div class="roles-layout">
+                  <div id="d-pitch" class="pitch"></div>
+                  <div id="d-roles" class="form-cols one"></div>
+                </div>
+              </div>
+              <div class="subpanel" data-sub="contract"><div id="d-contract" class="form-cols"></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TATTICA -->
+      <section id="tab-tactic" class="panel">
+        <div class="tactic-page">
+          <div class="filters">
+            <select id="t-file" title="Tattica salvata (cartella tactics di FM2007)" class="grow"></select>
+            <input id="t-club" type="search" placeholder="Club" class="w-club" list="club-names" title="Rosa da usare">
+            <input id="t-ask" type="text" inputmode="decimal" placeholder="Prezzo max (M)" class="w-price" title="Prezzo richiesto massimo per gli acquisti, in milioni">
+            <input id="t-age" type="number" min="15" max="45" placeholder="Età max" class="w-num" title="Età massima per gli acquisti">
+            <input id="t-ca" type="number" min="0" max="200" placeholder="CA min" class="w-num" title="CA minima per gli acquisti">
+            <button id="t-go" class="primary">Calcola</button>
+          </div>
+          <p id="t-info" class="muted t-info">Scegli una tattica e premi Calcola. Si legge la tattica <b>salvata</b>: se la cambi nel gioco, salvala (Tattica → Salva).</p>
+          <div class="tactic-layout">
+            <div>
+              <div id="t-pitch" class="tpitch"></div>
+              <p class="muted t-legend">Numero = punteggio nel ruolo (1-20): media degli attributi che contano nel ruolo, ridotta se il giocatore non è naturale lì. Freccia = movimento in attacco. Clic su un posto per i dettagli.</p>
+            </div>
+            <div id="t-slot" class="t-slot muted">Clic su un posto del campo per vedere i migliori della rosa e del mercato.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CLUB -->
+      <section id="tab-clubs" class="panel">
+        <div class="split">
+          <div class="pane list-pane narrow">
+            <div class="filters"><input id="cl-q" type="search" placeholder="Cerca club…" class="grow">
+              <button id="cl-search" class="primary" title="Cerca (Invio)">Cerca</button></div>
+            <div class="list-info"><span id="cl-info" class="muted"></span></div>
+            <div class="table-wrap" id="cl-wrap">
+              <table class="grid"><thead><tr><th>Club</th></tr></thead><tbody id="cl-body"></tbody></table>
+            </div>
+          </div>
+          <div id="cl-detail" class="pane detail-pane empty">
+            <div class="empty-msg">Seleziona un club</div>
+            <div class="detail">
+              <div class="detail-head"><div><button id="c-back" class="link back">← Torna ai club</button><h1 id="c-name">—</h1><div id="c-sub" class="muted"></div></div></div>
+              <div class="detail-actions">
+                <div class="subtabs" id="c-tabs">
+                  <button class="subtab active" data-sub="info">Informazioni</button>
+                  <button class="subtab" data-sub="fin">Finanze</button>
+                  <button class="subtab" data-sub="squad">Rosa</button>
+                </div>
+                <select id="c-team" title="Squadra">
+                  <option value="first">Prima squadra</option>
+                  <option value="reserves">Riserve</option>
+                  <option value="youth">Giovanili / Primavera</option>
+                  <option value="">Tutte</option>
+                </select>
+                <div class="spacer"></div>
+                <button id="c-morale" class="ghost" title="Porta il morale di tutta la squadra selezionata al massimo">Morale al massimo</button>
+                <button id="c-cond" class="ghost" title="Porta condizione e ritmo partita di tutta la squadra selezionata al 100%">Condizione 100%</button>
+                <button id="c-heal" class="ghost" title="Toglie tutti gli infortuni alla squadra selezionata">Guarisci tutti</button>
+                <button id="c-reload" class="ghost" title="Rileggi dal gioco">↻</button>
+                <button id="c-save" class="primary" disabled>Salva</button>
+                <button id="c-close" class="ghost" title="Chiudi (Esc)">✕</button>
+              </div>
+              <div class="subpanel active" data-sub="info">
+                <div id="c-info" class="form-cols"></div>
+              </div>
+              <div class="subpanel" data-sub="fin">
+                <div id="c-fin" class="form-cols"></div>
+                <p id="c-nofin" class="muted hidden">Questo club non ha dati finanziari in memoria (succede per i club minori).</p>
+              </div>
+              <div class="subpanel" data-sub="squad">
+                <div class="table-wrap" id="c-squad-wrap">
+                  <table class="grid fit" id="c-squad-table"><colgroup><col class="c-name"><col class="c-role"><col class="c-n"><col class="c-n"><col class="c-n"></colgroup><thead><tr><th data-sort="name">Nome</th><th data-sort="role">Ruolo</th><th data-sort="age" class="num">Età</th><th data-sort="ca" class="num">CA</th><th data-sort="pa" class="num">PA</th></tr></thead>
+                    <tbody id="c-squad"></tbody></table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STRUMENTI AVANZATI -->
+      <!-- SCANNER -->
+    <section id="tab-scanner" class="panel tools-panel">
+      <div class="scan-grid">
+        <div class="card controls">
+          <h2>Ricerca valore</h2>
+          <label>Tipo
+            <select id="s-type">
+              <option value="int32">Intero 4 byte (soldi, ingaggi)</option>
+              <option value="int16">Intero 2 byte (CA/PA)</option>
+              <option value="byte">Byte (attributi 1-20)</option>
+              <option value="int64">Intero 8 byte</option>
+              <option value="float">Decimale 4 byte</option>
+              <option value="double">Decimale 8 byte</option>
+            </select>
+          </label>
+          <label>Condizione
+            <select id="s-cond"></select>
+          </label>
+          <div class="row">
+            <label>Valore <input id="s-v1" type="text" placeholder="es. 25000000"></label>
+            <label id="s-v2-wrap" class="hidden">e <input id="s-v2" type="text"></label>
+          </div>
+          <label class="check"><input id="s-aligned" type="checkbox"> Solo indirizzi allineati (più veloce, ma FM salva molti dati non allineati)</label>
+          <div class="row buttons">
+            <button id="btn-first" class="primary">Prima scansione</button>
+            <button id="btn-next" disabled>Scansione successiva</button>
+            <button id="btn-reset" class="ghost">Nuova</button>
+          </div>
+          <p id="scan-info" class="muted">Nessuna scansione attiva.</p>
+          <details class="help">
+            <summary>Come trovare il saldo della Juve</summary>
+            <ol>
+              <li>In FM2007 apri Finanze e leggi il saldo.</li>
+              <li>Tipo "Intero 4 byte", condizione "Valore esatto", scrivi il saldo e premi <b>Prima scansione</b>.</li>
+              <li>Fai cambiare il saldo nel gioco (vai avanti di un giorno o vendi un giocatore).</li>
+              <li>Scrivi il nuovo saldo e premi <b>Scansione successiva</b>. Ripeti finché restano pochi risultati.</li>
+              <li>Aggiungi il risultato agli indirizzi salvati e modificalo.</li>
+            </ol>
+            <p>Se non trovi nulla, il gioco potrebbe salvare i soldi in un'altra valuta o come decimale: prova "Valore sconosciuto" e poi "Aumentato/Diminuito".</p>
+          </details>
+        </div>
+        <div class="card results">
+          <h2>Risultati <span id="res-count" class="muted"></span></h2>
+          <div class="row write-all">
+            <input id="wa-value" type="text" placeholder="Valore da scrivere">
+            <label class="inline">dal n. <input id="wa-from" type="text" class="tiny" placeholder="1"></label>
+            <label class="inline">al n. <input id="wa-to" type="text" class="tiny" placeholder="ultimo"></label>
+            <button id="btn-wa">Scrivi sui risultati</button>
+            <button id="btn-wa-restore" class="ghost">Ripristina</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>N.</th><th>Indirizzo</th><th>Valore attuale</th><th>Precedente</th><th></th></tr></thead>
+              <tbody id="res-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CERCA: STRINGHE E PUNTATORI -->
+    <section id="tab-search" class="panel tools-panel">
+      <div class="search-grid">
+        <div class="card">
+          <h2>Cerca testo</h2>
+          <div class="row">
+            <input id="str-text" type="text" class="grow" placeholder="es. Del Piero, Juventus">
+            <button id="btn-str" class="primary">Cerca</button>
+          </div>
+          <div class="row opts">
+            <label class="check"><input type="checkbox" class="str-enc" value="utf-16-le" checked> UTF-16</label>
+            <label class="check"><input type="checkbox" class="str-enc" value="cp1252" checked> ANSI</label>
+            <label class="check"><input type="checkbox" class="str-enc" value="utf-8"> UTF-8</label>
+            <label class="check"><input id="str-case" type="checkbox"> Maiuscole/minuscole esatte</label>
+          </div>
+          <p id="str-info" class="muted">Cerca il nome di un giocatore o di un club per trovare il suo oggetto in memoria.</p>
+          <div class="table-wrap half">
+            <table>
+              <thead><tr><th>Indirizzo</th><th>Cod.</th><th>Testo trovato</th><th></th></tr></thead>
+              <tbody id="str-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Chi punta qui?</h2>
+          <div class="row">
+            <input id="ptr-addr" type="text" class="grow" placeholder="Indirizzo di destinazione, es. 0x1A2B3C40">
+            <label class="inline">Offset max
+              <select id="ptr-off">
+                <option value="0">0 (esatto)</option>
+                <option value="64">0x40</option>
+                <option value="256">0x100</option>
+                <option value="1024" selected>0x400</option>
+                <option value="4096">0x1000</option>
+              </select>
+            </label>
+            <button id="btn-ptr" class="primary">Cerca puntatori</button>
+          </div>
+          <div id="ptr-chain" class="chain hidden"></div>
+          <p id="ptr-info" class="muted">Trova gli indirizzi che contengono un puntatore a questo indirizzo (o fino a "offset max" byte prima).
+            Quelli in <b>fm.exe+…</b> sono statici: non cambiano tra un avvio e l'altro.</p>
+          <div class="table-wrap half">
+            <table>
+              <thead><tr><th>Indirizzo</th><th>Statico</th><th>Punta a</th><th>Offset</th><th></th></tr></thead>
+              <tbody id="ptr-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div id="nu-card" class="card values-card hidden">
+        <h2 id="nu-title">Chi usa questo nome?</h2>
+        <p id="nu-info" class="muted"></p>
+        <div class="table-wrap half">
+          <table>
+            <thead><tr><th>Oggetto (inizio stimato)</th><th>Vtable</th><th>Campo del nome</th><th>Puntatore a</th><th></th></tr></thead>
+            <tbody id="nu-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card values-card">
+        <h2>Trova valori vicini (interi 4 byte)</h2>
+        <p class="muted">Una riga per valore: <b>nome minimo massimo</b>. Trova i punti della memoria dove tutti i valori
+          stanno a pochi byte l'uno dall'altro (es. incassi, spese e stipendi del mese nella struttura finanze del club).</p>
+        <div class="row">
+          <textarea id="grp-lines" class="grow" rows="5">Incassi 15.955.000 15.964.999
+Spese 10.805.000 10.814.999
+Stipendi 10.215.000 10.224.999</textarea>
+          <div>
+            <label class="inline">Distanza max
+              <select id="grp-dist">
+                <option value="128">0x80</option>
+                <option value="512" selected>0x200</option>
+                <option value="2048">0x800</option>
+              </select>
+            </label>
+            <button id="btn-grp" class="primary" style="margin-top:8px">Cerca</button>
+          </div>
+        </div>
+        <p id="grp-info" class="muted"></p>
+        <div class="table-wrap half">
+          <table>
+            <thead><tr><th>Inizio</th><th>Ampiezza</th><th>Valori trovati (offset dall'inizio)</th><th></th></tr></thead>
+            <tbody id="grp-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card values-card">
+        <h2>Trova valori collegati a un oggetto</h2>
+        <p class="muted">Parte dall'oggetto, segue i suoi puntatori (fino a 2 livelli) e cerca il blocco di memoria che contiene questi valori,
+          in qualsiasi ordine. Utile per trovare gli attributi di un giocatore partendo dal suo oggetto persona.<br>
+          <b>Conferma</b>: in quanti altri oggetti dello stesso tipo lo stesso percorso porta a valori simili ma diversi.
+          Gli attributi veri hanno conferma alta; una tabella che contiene i valori per caso ha conferma 0%.</p>
+        <div class="row">
+          <input id="val-addr" type="text" placeholder="Indirizzo oggetto (vuoto = tutta la memoria)">
+          <input id="val-list" type="text" class="grow" placeholder="Valori 1-20 separati da spazio, es. 15 17 16 9 17 17 19 18 ...">
+          <label class="inline">Livelli
+            <select id="val-depth">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3 (lento)</option>
+            </select>
+          </label>
+          <button id="btn-val" class="primary">Cerca</button>
+        </div>
+        <p id="val-info" class="muted"></p>
+        <div class="table-wrap half">
+          <table>
+            <thead><tr><th>Valori trovati</th><th>Conferma</th><th>Scala</th><th>Inizio finestra</th><th>Percorso dall'oggetto</th><th></th></tr></thead>
+            <tbody id="val-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <details class="help card">
+        <summary>Come risalire da un nome alla struttura del giocatore</summary>
+        <ol>
+          <li>Cerca il nome (es. "Del Piero"). Di solito escono poche copie in UTF-16.</li>
+          <li>Su un risultato premi <b>Puntatori</b>: trovi chi punta al nome. Il puntatore sta quasi sempre <i>dentro</i> l'oggetto giocatore (o in un oggetto "nome" intermedio).</li>
+          <li>Premi <b>Memoria</b> sul puntatore e guarda intorno: dovresti riconoscere valori come età, CA/PA, attributi 1–20.</li>
+          <li>Da quel puntatore premi di nuovo <b>Puntatori</b> con un offset max più grande (0x400–0x1000): trovi chi punta all'<i>inizio</i> dell'oggetto, cioè la lista dei giocatori.</li>
+          <li>Ripeti finché trovi un indirizzo <b>fm.exe+…</b>: è la base fissa della catena.</li>
+        </ol>
+        <p>La colonna "Offset" dice di quanti byte il destinatario sta dopo l'indirizzo puntato: è la posizione del campo dentro l'oggetto.</p>
+      </details>
+    </section>
+
+    <!-- TABELLA INDIRIZZI -->
+    <section id="tab-table" class="panel tools-panel">
+      <div class="card">
+        <div class="row between">
+          <h2>Indirizzi salvati</h2>
+          <div class="row">
+            <input id="t-addr" type="text" placeholder="0x...">
+            <select id="t-type">
+              <option value="int32">int32</option>
+              <option value="int64">int64</option>
+              <option value="int16">int16</option>
+              <option value="byte">byte</option>
+              <option value="float">float</option>
+              <option value="double">double</option>
+            </select>
+            <input id="t-label" type="text" placeholder="Nome (es. Saldo Juve)">
+            <button id="btn-add">Aggiungi</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nome</th><th>Indirizzo</th><th>Tipo</th><th>Valore</th><th>Nuovo valore</th><th>Blocca</th><th></th></tr></thead>
+            <tbody id="t-body"></tbody>
+          </table>
+        </div>
+        <p class="muted">Gli indirizzi cambiano a ogni avvio del gioco: per ora vanno ritrovati con lo scanner. Nella fase 2 li renderemo stabili con i puntatori.</p>
+      </div>
+    </section>
+
+    <!-- MEMORIA -->
+    <section id="tab-memory" class="panel tools-panel">
+      <div class="card">
+        <div class="row">
+          <input id="m-addr" type="text" placeholder="0x...">
+          <select id="m-len">
+            <option value="256">256 byte</option>
+            <option value="512">512 byte</option>
+            <option value="1024">1 KB</option>
+          </select>
+          <button id="btn-dump" class="primary">Mostra</button>
+          <button id="btn-prev" class="ghost">◀ −256</button>
+          <button id="btn-next-page" class="ghost">+256 ▶</button>
+          <button id="btn-mem-ptr" class="ghost">Chi punta qui?</button>
+          <label class="check"><input id="m-auto" type="checkbox"> Aggiorna ogni secondo</label>
+        </div>
+        <p class="muted">Usa questa vista per capire cosa c'è vicino a un valore trovato (es. budget mercato e monte ingaggi accanto al saldo). I byte cambiati dall'ultimo aggiornamento sono evidenziati.</p>
+        <div class="table-wrap mono">
+          <table>
+            <thead><tr><th>Indirizzo</th><th>Hex</th><th>ASCII</th><th>int32 (+0, +4, +8, +C)</th></tr></thead>
+            <tbody id="m-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+    </main>
+  </div>
+
+  <!-- IMPOSTAZIONI -->
+  <div id="settings" class="modal hidden">
+    <div class="modal-box">
+      <h2>Impostazioni</h2>
+      <label class="chk big"><input id="set-auto" type="checkbox" checked> Usa la valuta scelta nel gioco (automatico)</label>
+      <p id="set-game-rate" class="muted"></p>
+      <label class="field">Cambio manuale (usato se l'automatico è spento)
+        <input id="set-factor" type="text" value="1">
+        <small class="muted">In memoria i soldi sono in sterline. Se il gioco li mostra in un'altra valuta, scrivi qui il
+          cambio (es. 1,45 per gli euro). Con 1 le cifre dell'editor sono uguali a quelle in sterline.</small>
+      </label>
+      <label class="chk big"><input id="set-adv" type="checkbox"> Mostra gli strumenti avanzati (scanner, memoria, ricerche)</label>
+      <div class="row end"><button id="set-close" class="primary">Chiudi</button></div>
+    </div>
+  </div>
+
+  <datalist id="club-names"></datalist>
+  <datalist id="nation-names"></datalist>
+  <div id="toast" class="toast hidden"></div>
+  <script src="common.js"></script>
+  <script src="tools.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>

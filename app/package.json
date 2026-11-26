@@ -1,0 +1,42 @@
+{
+  "name": "fm07-editor",
+  "version": "0.1.0",
+  "description": "Editor in tempo reale per Football Manager 2007",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "author": "Zichi90123",
+  "build": {
+    "appId": "com.zichi90123.fm07editor",
+    "productName": "FM07 Live Editor",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend/dist/backend",
+        "to": "backend"
+      }
+    ],
+    "win": {
+      "target": "portable",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "FM07-Live-Editor-${version}.exe"
+    }
+  }
+}
