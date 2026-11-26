@@ -211,8 +211,8 @@ OFF_MORALE = OBJ + 0x48
 #   +0x10 u16 durata stimata in giorni (NON scende col tempo: azzerarlo cambia solo l'etichetta),
 #   +0x12 u16 durata totale. Ogni infortunio è puntato SOLO dalla lista: per guarire si toglie da lì.
 PLAYER_STATUS = 0x30
-STATUS_INJURY_LIST = 0x10
-STATUS_INJURY_COUNT = 0x14
+STATUS_INJURY_LIST = 0x08   # FM07, trovato sulla partita (FM08: 0x10); injury_layout lo ricontrolla
+STATUS_INJURY_COUNT = 0x0C
 INJURY_VTABLE = 0x01097EDC
 INJURY_DAYS_LEFT = 0x10
 INJURY_DAYS_TOTAL = 0x12

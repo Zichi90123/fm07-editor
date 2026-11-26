@@ -73,9 +73,9 @@ Gli oggetti giocatore sono consecutivi ogni **0x1E4** byte (FM08: 0x37C).
 Nelle rose ci sono anche oggetti di altre classi: VIRTUAL_PLAYER (`0x0134B4BC`) e
 ACTUAL_PLAYER_AND_NON_PLAYER (`0x0136E024`, giocatori-allenatori, persona a +0x10C): l'editor li ignora.
 
-Infortuni: il puntatore allo stato (oggetto +0x30) è confermato, ma dentro lo stato la lista non è a
-+0x10 come in FM08; l'editor la cerca all'aggancio (`player.injury_layout`). Oggetto infortunio:
-+0x10 u16 giorni stimati, +0x12 u16 durata totale (es. 98 / 128). ❓
+Infortuni: stato = oggetto +0x30; nello stato **lista +0x08, numero +0x0C** (FM08: +0x10 / +0x14) ✅ partita
+(19 infortunati su 3000). L'editor lo ricontrolla all'aggancio (`player.injury_layout`). Oggetto infortunio:
++0x10 u16 giorni stimati, +0x12 u16 durata totale (es. 98 / 128).
 
 ## Blocco attributi (PLAYING_DATA)
 
@@ -96,9 +96,13 @@ portieri gli 11 attributi da portiere sono esattamente agli offset previsti (0x4
 | club | +0x08 | +0x08 | 🟡 |
 | stipendio settimanale | +0x10 | +0x10 | 🟡 |
 | inizio / scadenza (data) | +0x18 / +0x20 | +0x18 / +0x20 | 🟡 |
-| premio presenza | +0x48 | **+0x4C** | 🟡 getter spostato |
-| premio gol | +0x4C | **+0x50** | 🟡 |
+| premio presenza | +0x48 | **+0x4C** | 🟡 getter spostato; sulla partita = 10% dello stipendio, come in FM08 |
+| premio gol | +0x4C | **+0x50** | ❓ |
 | premio porta inviolata? | +0x50 | **+0x58** (+0x54 è un campo nuovo) | ❓ |
+
+Esempio sulla partita: stipendio 15.000, inizio 01/07/2005, scadenza 30/06/2009, +0x48 = 100,
++0x4C = 1.500, +0x50 = 375, +0x54 = 3.750, +0x58 = 0. I contratti da 45-50 a settimana (dilettanti)
+non hanno scadenza.
 
 ## Club
 
@@ -128,7 +132,7 @@ Finanze **`*(club + 0x118)`** (FM08 +0x11C) ✅ partita: 300 finanze su 300, e l
 
 ## Allenatori umani
 
-Persona di HUMAN_NON_PLAYER: nome +0x2C / cognome +0x30, lista contratti +0x98 (come i giocatori). 🟡
+Persona di HUMAN_NON_PLAYER: nome +0x2C / cognome +0x30, lista contratti +0x98 (come i giocatori). ✅ partita
 
 ## Data del gioco
 
@@ -153,7 +157,8 @@ non ancora verificato sui file di FM07 (i file non riconosciuti vengono saltati)
 
 Con il gioco aperto, `python backend/verify.py` controlla tutte le voci ❓ e 🟡. In ordine di importanza:
 
-1. lista infortuni dentro lo stato (trovata in automatico: controllare che gli infortunati siano giusti);
-2. premi del contratto, budget ingaggi, squadre allenate dall'utente;
-3. indirizzo fisso della data di gioco e valuta;
-4. scrittura: provare una modifica per tipo (attributo, condizione, saldo) e controllarla nel gioco.
+Tutte le letture risultano OK sulla partita di prova (verify.py del 26/11/2026). Restano:
+
+1. scrittura: provare una modifica per tipo (attributo, condizione, saldo, Guarisci) e controllarla nel gioco;
+2. premi gol / porta inviolata del contratto e budget ingaggi, confrontandoli con le schermate del gioco;
+3. indirizzo fisso della data di gioco e valuta.
