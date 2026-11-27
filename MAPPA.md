@@ -157,8 +157,8 @@ non ancora verificato sui file di FM07 (i file non riconosciuti vengono saltati)
 
 Con il gioco aperto, `python backend/verify.py` controlla tutte le voci ❓ e 🟡. In ordine di importanza:
 
-Tutte le letture risultano OK sulla partita di prova (verify.py del 26/11/2026). Restano:
+Tutte le letture risultano OK sulla partita di prova (verify.py del 26/11/2026) e l'editor è stato
+provato in gioco con esito positivo (27/11/2026). Restano da confrontare con le schermate del gioco:
 
-1. scrittura: provare una modifica per tipo (attributo, condizione, saldo, Guarisci) e controllarla nel gioco;
-2. premi gol / porta inviolata del contratto e budget ingaggi, confrontandoli con le schermate del gioco;
-3. indirizzo fisso della data di gioco e valuta.
+1. premi gol / porta inviolata del contratto e budget ingaggi;
+2. indirizzo fisso della data di gioco e valuta.

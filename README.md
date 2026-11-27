@@ -4,9 +4,9 @@ Editor in tempo reale per Football Manager 2007 (versione 7.0.2), in stile FMRTE
 Costruito sulla base di [fm08-editor](https://github.com/Zichi90123/fm08-editor): stesso backend Python
 (lettura/scrittura memoria con `ctypes` + `numpy`) e stessa interfaccia Electron.
 
-> **Stato: da verificare in gioco.** La mappa della memoria di FM07 è stata ricavata dall'eseguibile
-> (`fm.exe` 7.0.2) confrontandolo con quello di FM08, senza il gioco avviato. Prima di modificare
-> una partita lancia la verifica (sotto) e fai sempre un backup del salvataggio.
+> **Stato: provato in gioco.** La mappa della memoria di FM07 è stata ricavata dall'eseguibile
+> (`fm.exe` 7.0.2) confrontandolo con quello di FM08 e poi verificata su una partita vera: letture e
+> modifiche funzionano. Fai comunque sempre un backup del salvataggio prima di modificare.
 
 ## Download (per usarlo e basta)
 
